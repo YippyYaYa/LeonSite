@@ -1,0 +1,9 @@
+<div class="sidedock-container" [ngClass]="{ 'reverse-animation': !sharedService.showSideDock.getValue(), 'play-animation': sharedService.showSideDock.getValue()}">
+  <div class="u-pointer align-self-end" (click)="sharedService.toggleSideDock()">Close</div>
+  <div class="u-font-title">ABOUT</div>
+  <div class="u-font-title">MEDIA</div>
+  <div class="u-font-title">CONNECT</div>
+  <div class="u-font-title">RESOURCES</div>
+  <div class="u-font-title">CAREER</div>
+  <div class="u-font-title">INDUSTRY RECOGNITION</div>
+</div>

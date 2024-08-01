@@ -1,0 +1,16 @@
+html {
+  font-size: 10px;
+}
+
+.u-pointer {
+  cursor: pointer;
+}
+
+.u-font {
+  &-title {
+    font-family: "Gotham", Sans-serif;
+    font-size: 1.2vw;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+}

@@ -1,0 +1,35 @@
+.sidedock-container {
+  padding: 2.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 5rem;
+  top: 0rem;
+  position: fixed;
+  height: 100%;
+  background-color: burlywood;
+
+  .align-self-end {
+    align-self: flex-end;
+  }
+  
+  &.play-animation {
+    animation-name: showDock;
+    animation-duration: 1s;
+    animation-fill-mode: forwards;
+  }
+  
+  &.reverse-animation {
+    animation-name: hideDock;
+    animation-duration: 1s;
+    animation-fill-mode: forwards;
+  }
+}
+
+@keyframes showDock {
+  from {right: -100%;}
+  to {right: 0rem;}
+}
+@keyframes hideDock {
+  from {right: 0rem;}
+  to {right: -100%;}
+}
