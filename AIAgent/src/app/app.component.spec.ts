@@ -14,16 +14,16 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have the 'AgentGPT' title`, () => {
+  it(`should have the 'AIAgent' title`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('AgentGPT');
+    expect(app.title).toEqual('AIAgent');
   });
 
   it('should render title', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, AgentGPT');
+    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, AIAgent');
   });
 });
