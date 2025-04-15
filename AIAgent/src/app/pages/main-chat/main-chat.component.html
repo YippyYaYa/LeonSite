@@ -23,7 +23,7 @@
     </header>
 
     <!-- Chat Messages -->
-    <section class="flex-1 p-4 overflow-y-auto space-y-4">
+    <section #chatContainer class="flex-1 p-4 overflow-y-auto space-y-4">
       @if ((chatHistory?.length || 0) > 0) {
         @for (msg of chatHistory; track msg) {
           <div [class]="'flex ' + (msg.from === 'user' ? 'justify-end' : 'justify-start')">
@@ -34,6 +34,15 @@
         }
       } @else {
         <p class="text-gray-400 text-sm text-center mt-10">No messages available for this topic.</p>
+      }
+    @if (isTyping) {
+        <div class="flex justify-start">
+          <div class="p-3 rounded shadow max-w-sm bg-blue-100 text-blue-700 italic flex items-center gap-1">
+  <span class="w-2 h-2 rounded-full bg-blue-700 [animation-delay:0s] animate-bounce"></span>
+  <span class="w-2 h-2 rounded-full bg-blue-700 [animation-delay:0.2s] animate-bounce"></span>
+  <span class="w-2 h-2 rounded-full bg-blue-700 [animation-delay:0.4s] animate-bounce"></span>
+</div>
+        </div>
       }
     </section>
 

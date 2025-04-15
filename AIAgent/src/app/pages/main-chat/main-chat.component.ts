@@ -1,6 +1,11 @@
-import { Component } from '@angular/core';
+import {
+  Component,
+  ViewChild,
+  ElementRef,
+  AfterViewChecked
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms'; // Needed for ngModel
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-main-chat',
@@ -9,7 +14,9 @@ import { FormsModule } from '@angular/forms'; // Needed for ngModel
   templateUrl: './main-chat.component.html',
   styleUrl: './main-chat.component.scss'
 })
-export class MainChatComponent {
+export class MainChatComponent implements AfterViewChecked {
+  @ViewChild('chatContainer') private chatContainer!: ElementRef;
+
   chats: Record<string, { from: 'user' | 'ai'; text: string }[]> = {
     'Private Condo Market Trends': [
       {
@@ -57,26 +64,43 @@ export class MainChatComponent {
   topicList = Object.keys(this.chats);
   chatHistory = this.chats[this.selectedTopic];
   newMessage = '';
+  isTyping = false;
 
-  loadChat(topic: string) {
+  ngAfterViewChecked(): void {
+    this.scrollToBottom();
+  }
+
+  scrollToBottom(): void {
+    if (this.chatContainer) {
+      setTimeout(() => {
+        this.chatContainer.nativeElement.scrollTop =
+          this.chatContainer.nativeElement.scrollHeight;
+      });
+    }
+  }
+
+  loadChat(topic: string): void {
     this.selectedTopic = topic;
     this.chatHistory = this.chats[topic] || [];
     this.newMessage = '';
+    this.isTyping = false;
   }
 
-  sendMessage() {
+  sendMessage(): void {
     const message = this.newMessage.trim();
     if (!message) return;
 
     this.chatHistory.push({ from: 'user', text: message });
     this.newMessage = '';
+    this.isTyping = true;
 
-    // Simulate AI response (optional placeholder)
+    // Simulated AI reply
     setTimeout(() => {
       this.chatHistory.push({
         from: 'ai',
         text: 'Thank you for your question. Let me get back to you with the data.'
       });
-    }, 500);
+      this.isTyping = false;
+    }, 10000);
   }
 }
