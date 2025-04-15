@@ -5,6 +5,10 @@
 class="fixed inset-0 z-30 md:hidden backdrop-blur-md" 
 (click)="showSidebar = false">
 </div>
+
+<!-- Close sidebar on ESC key -->
+<div (window:keydown.escape)="showSidebar = false"></div>
+
 <!-- Sidebar for Past Topics -->
 <aside
 class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 md:z-auto md:w-64 md:block p-4 overflow-y-auto"
@@ -34,7 +38,6 @@ class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-xl md:shadow-none transf
         </svg>
       </button>
     <h1 class="text-xl font-semibold">AI Real Estate Assistant</h1>
-    <span class="text-sm text-gray-500">Active</span>
   </header>
 
   <!-- Chat Messages -->
