@@ -52,11 +52,13 @@ export class MainChatComponent implements OnInit, AfterViewChecked {
       'Older': []
     };
 
-    const sortedTopics = [...this.topics].sort((a, b) => {
-      const aTime = this.getLastMessageTimestamp(a);
-      const bTime = this.getLastMessageTimestamp(b);
-      return aTime.getTime() - bTime.getTime(); // oldest first
-    });
+    const sortedTopics = this.topics
+      .filter(t => !t.pinned)
+      .sort((a, b) => {
+        const aTime = this.getLastMessageTimestamp(a);
+        const bTime = this.getLastMessageTimestamp(b);
+        return aTime.getTime() - bTime.getTime();
+      });
 
     for (const topic of sortedTopics) {
       const last = this.getLastMessageTimestamp(topic);
@@ -74,6 +76,39 @@ export class MainChatComponent implements OnInit, AfterViewChecked {
     }
 
     return groups;
+  }
+
+  get pinnedTopics(): ChatTopic[] {
+    return this.topics.filter(t => t.pinned);
+  }
+
+  isTopicPinned(topic: ChatTopic): boolean {
+    return !!topic.pinned;
+  }
+
+  pinTopic(topic: ChatTopic, e: MouseEvent): void {
+    e.stopPropagation();
+    topic.pinned = !topic.pinned;
+    this.updateLocalStorage();
+  }
+
+  renameTopic(topic: ChatTopic, e: MouseEvent): void {
+    e.stopPropagation();
+    const newTitle = prompt('Rename topic:', topic.title);
+    if (newTitle) {
+      topic.title = newTitle;
+      this.updateLocalStorage();
+    }
+  }
+
+  deleteTopic(topic: ChatTopic, e: MouseEvent): void {
+    e.stopPropagation();
+    const confirmDelete = confirm(`Delete topic "${topic.title}"?`);
+    if (confirmDelete) {
+      this.topics = this.topics.filter(t => t.id !== topic.id);
+      if (this.selectedTopicId === topic.id) this.selectedTopicId = '';
+      this.updateLocalStorage();
+    }
   }
 
   private getLastMessageTimestamp(topic: ChatTopic): Date {
@@ -112,7 +147,8 @@ export class MainChatComponent implements OnInit, AfterViewChecked {
         id: newId,
         title: newTitle,
         messages: [{ from: 'user', text: message }],
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        pinned: false
       };
 
       this.topics.push(newTopic);

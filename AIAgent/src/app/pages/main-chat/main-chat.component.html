@@ -1,8 +1,8 @@
 <div class="h-screen flex flex-col md:flex-row bg-gray-100 relative">
   <!-- Sidebar Backdrop -->
-  <div 
-    *ngIf="showSidebar && screenIsSmall()" 
-    class="fixed inset-0 z-30 md:hidden backdrop-blur-md" 
+  <div
+    [hidden]="!(showSidebar && screenIsSmall())"
+    class="fixed inset-0 z-30 md:hidden backdrop-blur-md"
     (click)="showSidebar = false">
   </div>
 
@@ -13,30 +13,57 @@
   <aside
     class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 md:z-auto md:w-64 md:block p-4 overflow-y-auto"
     [class.-translate-x-full]="!showSidebar && screenIsSmall()"
-    [class.translate-x-0]="showSidebar || !screenIsSmall()"
-  >
+    [class.translate-x-0]="showSidebar || !screenIsSmall()">
+
     <h2 class="text-xl font-semibold mb-4">Past Topics</h2>
 
     <button
       (click)="selectedTopicId = ''; newMessage = ''; showSidebar = false"
-      class="mb-4 w-full px-3 py-2 text-sm border border-gray-300 rounded text-blue-600 hover:bg-blue-100 transition"
-    >
+      class="mb-4 w-full px-3 py-2 text-sm border border-gray-300 rounded text-blue-600 hover:bg-blue-100 transition">
       + New Chat
     </button>
 
+    <!-- Pinned Topics -->
+    <ul class="space-y-2 text-sm" [hidden]="pinnedTopics.length === 0">
+      <li class="text-xs uppercase text-yellow-600 font-semibold">📌 Pinned</li>
+      @for (topic of pinnedTopics; track topic.id) {
+        <li>
+          <div
+            class="p-2 rounded cursor-pointer hover:bg-yellow-100 flex justify-between items-center group"
+            [class.bg-yellow-100]="topic.id === selectedTopicId"
+            (click)="loadChat(topic.id)">
+            <span class="truncate">{{ topic.title }}</span>
+            <ng-container [ngTemplateOutlet]="actionButtons" [ngTemplateOutletContext]="{ topic: topic }"></ng-container>
+          </div>
+        </li>
+      }
+    </ul>
+
+    <!-- Grouped Topics -->
     <ul class="space-y-4 text-sm">
       @for (group of groupedTopics | keyvalue; track group.key) {
         <li class="text-xs uppercase text-gray-500 font-semibold">{{ group.key }}</li>
         @for (topic of group.value; track topic.id) {
-          <li 
-            class="p-2 rounded cursor-pointer hover:bg-gray-200" 
-            [class.bg-gray-200]="topic.id === selectedTopicId" 
+          <li
+            class="p-2 rounded cursor-pointer hover:bg-gray-200 flex justify-between items-center group"
+            [class.bg-gray-200]="topic.id === selectedTopicId"
             (click)="loadChat(topic.id)">
-            {{ topic.title }}
+            <span class="truncate">{{ topic.title }}</span>
+            <ng-container [ngTemplateOutlet]="actionButtons" [ngTemplateOutletContext]="{ topic: topic }"></ng-container>
           </li>
         }
       }
     </ul>
+
+    <ng-template #actionButtons let-topic="topic">
+      <div class="hidden group-hover:flex gap-1 ml-2">
+        <button (click)="pinTopic(topic, $event)" class="text-xs text-yellow-600 hover:underline">
+          {{ isTopicPinned(topic) ? '❌' : '📌' }}
+        </button>
+        <button (click)="renameTopic(topic, $event)" class="text-xs text-blue-600 hover:underline">✏️</button>
+        <button (click)="deleteTopic(topic, $event)" class="text-xs text-red-500 hover:underline">🗑️</button>
+      </div>
+    </ng-template>
   </aside>
 
   <!-- Chat Section -->
@@ -80,14 +107,14 @@
 
     <!-- Chat Input Box -->
     <footer class="p-4 bg-white border-t border-gray-200 flex flex-col sm:flex-row gap-2 sm:gap-4">
-      <input 
-        type="text" 
-        [(ngModel)]="newMessage" 
-        (keyup.enter)="sendMessage()" 
-        placeholder="Ask about real estate..." 
+      <input
+        type="text"
+        [(ngModel)]="newMessage"
+        (keyup.enter)="sendMessage()"
+        placeholder="Ask about real estate..."
         class="w-full sm:flex-1 border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-      <button 
-        (click)="sendMessage()" 
+      <button
+        (click)="sendMessage()"
         class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
         Send
       </button>

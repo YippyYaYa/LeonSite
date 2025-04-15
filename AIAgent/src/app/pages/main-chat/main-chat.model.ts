@@ -8,4 +8,5 @@ export interface ChatTopic {
   title: string;
   messages: ChatMessage[];
   createdAt: string; // added timestamp for sorting/grouping
+  pinned: boolean;
 }
