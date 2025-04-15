@@ -2,7 +2,8 @@ import {
   Component,
   ViewChild,
   ElementRef,
-  AfterViewChecked
+  AfterViewChecked,
+  OnInit
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,57 +15,33 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './main-chat.component.html',
   styleUrl: './main-chat.component.scss'
 })
-export class MainChatComponent implements AfterViewChecked {
+export class MainChatComponent implements OnInit, AfterViewChecked {
   @ViewChild('chatContainer') private chatContainer!: ElementRef;
 
-  chats: Record<string, { from: 'user' | 'ai'; text: string }[]> = {
-    'Private Condo Market Trends': [
-      {
-        from: 'user',
-        text: 'Hi AI, what are the latest market trends for private condominiums?'
-      },
-      {
-        from: 'ai',
-        text: 'Current trends show a steady increase in demand, especially in city fringe areas. Would you like a breakdown by district?'
-      }
-    ],
-    'Freehold vs Leasehold': [
-      {
-        from: 'user',
-        text: 'Yes, and can you compare freehold vs leasehold value retention?'
-      },
-      {
-        from: 'ai',
-        text: 'Freehold properties generally retain value better over time, but leasehold may offer better short-term yield. Would you like specific data?'
-      }
-    ],
-    'HDB Upgrading Schemes': [
-      {
-        from: 'user',
-        text: 'What are the current HDB upgrading schemes available?'
-      },
-      {
-        from: 'ai',
-        text: 'There are several, including the Home Improvement Programme (HIP) and Neighbourhood Renewal Programme (NRP).'
-      }
-    ],
-    'Commercial Property ROI': [
-      {
-        from: 'user',
-        text: 'Is investing in commercial property a good idea in 2024?'
-      },
-      {
-        from: 'ai',
-        text: 'It can be, especially with the rise in demand for mixed-use spaces. Would you like to see projected ROI for specific zones?'
-      }
-    ]
-  };
-
+  chats: Record<string, { from: 'user' | 'ai'; text: string }[]> = {};
   selectedTopic = 'Private Condo Market Trends';
-  topicList = Object.keys(this.chats);
-  chatHistory = this.chats[this.selectedTopic];
+  topicList: string[] = [];
+  chatHistory: { from: 'user' | 'ai'; text: string }[] = [];
   newMessage = '';
   isTyping = false;
+  showSidebar = false;
+
+  ngOnInit(): void {
+    const saved = localStorage.getItem('chatHistory');
+    if (saved) {
+      this.chats = JSON.parse(saved);
+    } else {
+      this.chats = {
+        'Private Condo Market Trends': [],
+        'Freehold vs Leasehold': [],
+        'HDB Upgrading Schemes': [],
+        'Commercial Property ROI': []
+      };
+    }
+
+    this.topicList = Object.keys(this.chats);
+    this.loadChat(this.selectedTopic);
+  }
 
   ngAfterViewChecked(): void {
     this.scrollToBottom();
@@ -84,6 +61,7 @@ export class MainChatComponent implements AfterViewChecked {
     this.chatHistory = this.chats[topic] || [];
     this.newMessage = '';
     this.isTyping = false;
+    this.showSidebar = false; // Optional: auto-close sidebar on mobile after selection
   }
 
   sendMessage(): void {
@@ -91,6 +69,7 @@ export class MainChatComponent implements AfterViewChecked {
     if (!message) return;
 
     this.chatHistory.push({ from: 'user', text: message });
+    this.updateChats();
     this.newMessage = '';
     this.isTyping = true;
 
@@ -101,6 +80,16 @@ export class MainChatComponent implements AfterViewChecked {
         text: 'Thank you for your question. Let me get back to you with the data.'
       });
       this.isTyping = false;
-    }, 10000);
+      this.updateChats();
+    }, 1000);
+  }
+
+  updateChats(): void {
+    this.chats[this.selectedTopic] = this.chatHistory;
+    localStorage.setItem('chatHistory', JSON.stringify(this.chats));
+  }
+
+  screenIsSmall(): boolean {
+    return window.innerWidth < 768;
   }
 }
