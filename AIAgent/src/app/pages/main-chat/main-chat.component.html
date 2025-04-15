@@ -1,99 +1,96 @@
 <div class="h-screen flex flex-col md:flex-row bg-gray-100 relative">
   <!-- Sidebar Backdrop -->
-<div 
-*ngIf="showSidebar && screenIsSmall()" 
-class="fixed inset-0 z-30 md:hidden backdrop-blur-md" 
-(click)="showSidebar = false">
-</div>
-
-<!-- Close sidebar on ESC key -->
-<div (window:keydown.escape)="showSidebar = false"></div>
-
-<!-- Sidebar for Past Topics -->
-<aside
-class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 md:z-auto md:w-64 md:block p-4 overflow-y-auto"
-[class.-translate-x-full]="!showSidebar && screenIsSmall()"
-[class.translate-x-0]="showSidebar || !screenIsSmall()"
->
-  <h2 class="text-xl font-semibold mb-4">Past Topics</h2>
-  <div class="mb-4 flex items-center gap-2">
-    <input
-      [(ngModel)]="newTopicTitle"
-      (keyup.enter)="addTopic(newTopicTitle)"
-      placeholder="New topic title..."
-      class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-    />
-    <button
-      (click)="addTopic(newTopicTitle)"
-      class="px-3 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-    >
-      Add
-    </button>
+  <div 
+    *ngIf="showSidebar && screenIsSmall()" 
+    class="fixed inset-0 z-30 md:hidden backdrop-blur-md" 
+    (click)="showSidebar = false">
   </div>
-  <ul class="space-y-2 text-sm">
-    @for (topic of topicList; track topic) {
-      <li 
-        class="p-2 rounded cursor-pointer hover:bg-gray-200" 
-        [class.bg-gray-200]="topic === selectedTopic" 
-        (click)="loadChat(topic)">
-        {{ topic }}
-      </li>
-    }
-  </ul>
-</aside>
 
-<!-- Chat Section -->
-<main class="flex-1 flex flex-col">
-  <!-- Chat Title Bar -->
-  <header class="p-4 bg-white shadow flex items-center justify-between">
+  <!-- Close sidebar on ESC key -->
+  <div (window:keydown.escape)="showSidebar = false"></div>
+
+  <!-- Sidebar for Past Topics -->
+  <aside
+    class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 md:z-auto md:w-64 md:block p-4 overflow-y-auto"
+    [class.-translate-x-full]="!showSidebar && screenIsSmall()"
+    [class.translate-x-0]="showSidebar || !screenIsSmall()"
+  >
+    <h2 class="text-xl font-semibold mb-4">Past Topics</h2>
+
+    <button
+      (click)="selectedTopicId = ''; newMessage = ''; showSidebar = false"
+      class="mb-4 w-full px-3 py-2 text-sm border border-gray-300 rounded text-blue-600 hover:bg-blue-100 transition"
+    >
+      + New Chat
+    </button>
+
+    <ul class="space-y-4 text-sm">
+      @for (group of groupedTopics | keyvalue; track group.key) {
+        <li class="text-xs uppercase text-gray-500 font-semibold">{{ group.key }}</li>
+        @for (topic of group.value; track topic.id) {
+          <li 
+            class="p-2 rounded cursor-pointer hover:bg-gray-200" 
+            [class.bg-gray-200]="topic.id === selectedTopicId" 
+            (click)="loadChat(topic.id)">
+            {{ topic.title }}
+          </li>
+        }
+      }
+    </ul>
+  </aside>
+
+  <!-- Chat Section -->
+  <main class="flex-1 flex flex-col">
+    <!-- Chat Title Bar -->
+    <header class="p-4 bg-white shadow flex items-center justify-between">
       <button class="md:hidden mr-2 text-gray-600" (click)="showSidebar = !showSidebar" aria-label="Toggle Sidebar">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="w-6 h-6">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
-    <h1 class="text-xl font-semibold">AI Real Estate Assistant</h1>
-  </header>
+      <h1 class="text-xl font-semibold">AI Real Estate Assistant</h1>
+    </header>
 
-  <!-- Chat Messages -->
-  <section #chatContainer class="flex-1 p-4 overflow-y-auto space-y-4">
-  @if (!selectedTopic) {
-    <p class="text-center text-gray-400 text-sm mt-10">Start chatting by adding a topic from the sidebar.</p>
-  }
-    @if ((chatHistory?.length || 0) > 0) {
-      @for (msg of chatHistory; track msg) {
-        <div [class]="'flex ' + (msg.from === 'user' ? 'justify-end' : 'justify-start')">
-          <div [class]="'p-3 rounded shadow max-w-sm ' + (msg.from === 'user' ? 'bg-white text-black' : 'bg-blue-500 text-white')">
-            {{ msg.text }}
+    <!-- Chat Messages -->
+    <section #chatContainer class="flex-1 p-4 overflow-y-auto space-y-4">
+      @if (!selectedTopicId) {
+        <p class="text-center text-gray-400 text-sm mt-10">Start chatting by sending a message.</p>
+      }
+      @if ((chatHistory?.length || 0) > 0) {
+        @for (msg of chatHistory; track msg.text) {
+          <div [class]="'flex ' + (msg.from === 'user' ? 'justify-end' : 'justify-start')">
+            <div [class]="'p-3 rounded shadow max-w-sm ' + (msg.from === 'user' ? 'bg-white text-black' : 'bg-blue-500 text-white')">
+              {{ msg.text }}
+            </div>
+          </div>
+        }
+      } @else {
+        <p class="text-gray-400 text-sm text-center mt-10">No messages available for this topic.</p>
+      }
+      @if (isTyping) {
+        <div class="flex justify-start">
+          <div class="p-3 rounded shadow max-w-sm bg-blue-100 text-blue-700 italic flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-blue-700 [animation-delay:0s] animate-bounce"></span>
+            <span class="w-2 h-2 rounded-full bg-blue-700 [animation-delay:0.2s] animate-bounce"></span>
+            <span class="w-2 h-2 rounded-full bg-blue-700 [animation-delay:0.4s] animate-bounce"></span>
           </div>
         </div>
       }
-    } @else {
-      <p class="text-gray-400 text-sm text-center mt-10">No messages available for this topic.</p>
-    }
-  @if (isTyping) {
-      <div class="flex justify-start">
-        <div class="p-3 rounded shadow max-w-sm bg-blue-100 text-blue-700 italic flex items-center gap-1">
-<span class="w-2 h-2 rounded-full bg-blue-700 [animation-delay:0s] animate-bounce"></span>
-<span class="w-2 h-2 rounded-full bg-blue-700 [animation-delay:0.2s] animate-bounce"></span>
-<span class="w-2 h-2 rounded-full bg-blue-700 [animation-delay:0.4s] animate-bounce"></span>
-</div>
-      </div>
-    }
-  </section>
+    </section>
 
-  <!-- Chat Input Box -->
-  <footer class="p-4 bg-white border-t border-gray-200 flex flex-col sm:flex-row gap-2 sm:gap-4">
-  <input 
-    type="text" 
-    [(ngModel)]="newMessage" 
-    (keyup.enter)="sendMessage()" 
-    placeholder="Ask about real estate..." 
-    class="w-full sm:flex-1 border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-  <button 
-    (click)="sendMessage()" 
-    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-    Send
-  </button>
-</footer>
-</main>
+    <!-- Chat Input Box -->
+    <footer class="p-4 bg-white border-t border-gray-200 flex flex-col sm:flex-row gap-2 sm:gap-4">
+      <input 
+        type="text" 
+        [(ngModel)]="newMessage" 
+        (keyup.enter)="sendMessage()" 
+        placeholder="Ask about real estate..." 
+        class="w-full sm:flex-1 border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+      <button 
+        (click)="sendMessage()" 
+        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        Send
+      </button>
+    </footer>
+  </main>
 </div>

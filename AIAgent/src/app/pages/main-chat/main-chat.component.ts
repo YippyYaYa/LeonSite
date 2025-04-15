@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ChatMessage, ChatTopic } from './main-chat.model';
 
 @Component({
   selector: 'app-main-chat',
@@ -18,27 +19,69 @@ import { FormsModule } from '@angular/forms';
 export class MainChatComponent implements OnInit, AfterViewChecked {
   @ViewChild('chatContainer') private chatContainer!: ElementRef;
 
-  chats: Record<string, { from: 'user' | 'ai'; text: string }[]> = {};
-  selectedTopic = '';
-  topicList: string[] = [];
-  chatHistory: { from: 'user' | 'ai'; text: string }[] = [];
+  topics: ChatTopic[] = [];
+  selectedTopicId: string = '';
   newMessage = '';
-  newTopicTitle = '';
   isTyping = false;
   showSidebar = false;
 
   ngOnInit(): void {
-    const saved = localStorage.getItem('chatHistory');
-    this.chats = saved ? JSON.parse(saved) : {};
-    this.topicList = Object.keys(this.chats);
-    this.selectedTopic = this.topicList[0] || '';
-    if (this.selectedTopic) {
-      this.loadChat(this.selectedTopic);
+    const saved = localStorage.getItem('chatTopics');
+    this.topics = saved ? JSON.parse(saved) : [];
+
+    if (this.topics.length > 0) {
+      this.selectedTopicId = this.topics[0].id;
     }
   }
 
   ngAfterViewChecked(): void {
     this.scrollToBottom();
+  }
+
+  get chatHistory(): ChatMessage[] {
+    const topic = this.topics.find(t => t.id === this.selectedTopicId);
+    return topic ? topic.messages : [];
+  }
+
+  get groupedTopics(): Record<string, ChatTopic[]> {
+    const now = new Date();
+    const groups: Record<string, ChatTopic[]> = {
+      'Recently': [],
+      'Past 7 Days': [],
+      'Past Month': [],
+      'Older': []
+    };
+
+    const sortedTopics = [...this.topics].sort((a, b) => {
+      const aTime = this.getLastMessageTimestamp(a);
+      const bTime = this.getLastMessageTimestamp(b);
+      return aTime.getTime() - bTime.getTime(); // oldest first
+    });
+
+    for (const topic of sortedTopics) {
+      const last = this.getLastMessageTimestamp(topic);
+      const diff = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (diff < 1) {
+        groups['Recently'].push(topic);
+      } else if (diff < 7) {
+        groups['Past 7 Days'].push(topic);
+      } else if (diff < 30) {
+        groups['Past Month'].push(topic);
+      } else {
+        groups['Older'].push(topic);
+      }
+    }
+
+    return groups;
+  }
+
+  private getLastMessageTimestamp(topic: ChatTopic): Date {
+    const lastMsg = topic.messages.at(-1);
+    if ('timestamp' in (lastMsg ?? {})) {
+      return new Date((lastMsg as any).timestamp);
+    }
+    return lastMsg ? new Date() : new Date(topic.createdAt);
   }
 
   scrollToBottom(): void {
@@ -50,9 +93,8 @@ export class MainChatComponent implements OnInit, AfterViewChecked {
     }
   }
 
-  loadChat(topic: string): void {
-    this.selectedTopic = topic;
-    this.chatHistory = this.chats[topic] || [];
+  loadChat(topicId: string): void {
+    this.selectedTopicId = topicId;
     this.newMessage = '';
     this.isTyping = false;
     this.showSidebar = false;
@@ -62,66 +104,55 @@ export class MainChatComponent implements OnInit, AfterViewChecked {
     const message = this.newMessage.trim();
     if (!message) return;
 
-    // Handle creating a new topic from first message
-    if (!this.selectedTopic) {
-      const newTopicTitle = message.length > 40 ? message.slice(0, 40) + '...' : message;
-      if (this.chats[newTopicTitle]) {
-        alert('A topic with this name already exists.');
-        return;
-      }
+    if (!this.selectedTopicId) {
+      const newTitle = message.length > 40 ? message.slice(0, 40) + '...' : message;
+      const newId = crypto.randomUUID();
 
-      this.chats[newTopicTitle] = [{ from: 'user', text: message }];
-      this.selectedTopic = newTopicTitle;
-      this.topicList.push(newTopicTitle);
-      this.chatHistory = this.chats[newTopicTitle];
+      const newTopic: ChatTopic = {
+        id: newId,
+        title: newTitle,
+        messages: [{ from: 'user', text: message }],
+        createdAt: new Date().toISOString()
+      };
+
+      this.topics.push(newTopic);
+      this.selectedTopicId = newId;
       this.newMessage = '';
       this.isTyping = true;
-      this.updateChats();
+      this.updateLocalStorage();
 
       setTimeout(() => {
-        this.chatHistory.push({
+        newTopic.messages.push({
           from: 'ai',
           text: 'Thank you for your question. Let me get back to you with the data.'
         });
         this.isTyping = false;
-        this.updateChats();
+        this.updateLocalStorage();
       }, 1000);
 
       return;
     }
 
-    // Normal message flow
-    this.chatHistory.push({ from: 'user', text: message });
+    const topic = this.topics.find(t => t.id === this.selectedTopicId);
+    if (!topic) return;
+
+    topic.messages.push({ from: 'user', text: message });
     this.newMessage = '';
     this.isTyping = true;
-    this.updateChats();
+    this.updateLocalStorage();
 
     setTimeout(() => {
-      this.chatHistory.push({
+      topic.messages.push({
         from: 'ai',
         text: 'Thank you for your question. Let me get back to you with the data.'
       });
       this.isTyping = false;
-      this.updateChats();
+      this.updateLocalStorage();
     }, 1000);
   }
 
-  addTopic(title: string): void {
-    const trimmed = title.trim();
-    if (!trimmed || this.chats[trimmed]) return;
-
-    this.chats[trimmed] = [];
-    this.topicList.push(trimmed);
-    this.newTopicTitle = '';
-    this.loadChat(trimmed);
-    this.updateChats();
-  }
-
-  updateChats(): void {
-    if (this.selectedTopic) {
-      this.chats[this.selectedTopic] = this.chatHistory;
-      localStorage.setItem('chatHistory', JSON.stringify(this.chats));
-    }
+  updateLocalStorage(): void {
+    localStorage.setItem('chatTopics', JSON.stringify(this.topics));
   }
 
   screenIsSmall(): boolean {
