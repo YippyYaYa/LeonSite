@@ -56,7 +56,7 @@
     </ul>
 
     <ng-template #actionButtons let-topic="topic">
-      <div class="hidden group-hover:flex gap-1 ml-2">
+      <div class="flex gap-1 ml-2 md:opacity-0 md:group-hover:opacity-100 md:transition-opacity">
         <button (click)="pinTopic(topic, $event)" class="text-xs text-yellow-600 hover:underline">
           {{ isTopicPinned(topic) ? '❌' : '📌' }}
         </button>
