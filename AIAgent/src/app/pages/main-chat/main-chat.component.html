@@ -16,6 +16,20 @@ class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-xl md:shadow-none transf
 [class.translate-x-0]="showSidebar || !screenIsSmall()"
 >
   <h2 class="text-xl font-semibold mb-4">Past Topics</h2>
+  <div class="mb-4 flex items-center gap-2">
+    <input
+      [(ngModel)]="newTopicTitle"
+      (keyup.enter)="addTopic(newTopicTitle)"
+      placeholder="New topic title..."
+      class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+    />
+    <button
+      (click)="addTopic(newTopicTitle)"
+      class="px-3 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+    >
+      Add
+    </button>
+  </div>
   <ul class="space-y-2 text-sm">
     @for (topic of topicList; track topic) {
       <li 
@@ -42,6 +56,9 @@ class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-xl md:shadow-none transf
 
   <!-- Chat Messages -->
   <section #chatContainer class="flex-1 p-4 overflow-y-auto space-y-4">
+  @if (!selectedTopic) {
+    <p class="text-center text-gray-400 text-sm mt-10">Start chatting by adding a topic from the sidebar.</p>
+  }
     @if ((chatHistory?.length || 0) > 0) {
       @for (msg of chatHistory; track msg) {
         <div [class]="'flex ' + (msg.from === 'user' ? 'justify-end' : 'justify-start')">
@@ -66,17 +83,17 @@ class="fixed inset-y-0 left-0 z-40 w-64 bg-white shadow-xl md:shadow-none transf
 
   <!-- Chat Input Box -->
   <footer class="p-4 bg-white border-t border-gray-200 flex flex-col sm:flex-row gap-2 sm:gap-4">
-    <input 
-      type="text" 
-      [(ngModel)]="newMessage" 
-      (keyup.enter)="sendMessage()" 
-      placeholder="Ask about real estate..." 
-      class="w-full sm:flex-1 border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-    <button 
-      (click)="sendMessage()" 
-      class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-      Send
-    </button>
-  </footer>
+  <input 
+    type="text" 
+    [(ngModel)]="newMessage" 
+    (keyup.enter)="sendMessage()" 
+    placeholder="Ask about real estate..." 
+    class="w-full sm:flex-1 border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+  <button 
+    (click)="sendMessage()" 
+    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+    Send
+  </button>
+</footer>
 </main>
 </div>
