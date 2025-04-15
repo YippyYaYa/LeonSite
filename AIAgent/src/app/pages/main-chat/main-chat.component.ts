@@ -43,39 +43,35 @@ export class MainChatComponent implements OnInit, AfterViewChecked {
     return topic ? topic.messages : [];
   }
 
-  get groupedTopics(): Record<string, ChatTopic[]> {
+  get groupedTopicsSorted(): { label: string, topics: ChatTopic[] }[] {
     const now = new Date();
-    const groups: Record<string, ChatTopic[]> = {
-      'Recently': [],
-      'Past 7 Days': [],
-      'Past Month': [],
-      'Older': []
-    };
+    const buckets: { label: string, topics: ChatTopic[] }[] = [
+      { label: 'Recently', topics: [] },
+      { label: 'Past 7 Days', topics: [] },
+      { label: 'Past Month', topics: [] },
+      { label: 'Older', topics: [] }
+    ];
 
-    const sortedTopics = this.topics
+    const sorted = this.topics
       .filter(t => !t.pinned)
-      .sort((a, b) => {
-        const aTime = this.getLastMessageTimestamp(a);
-        const bTime = this.getLastMessageTimestamp(b);
-        return aTime.getTime() - bTime.getTime();
-      });
+      .sort((a, b) => this.getLastMessageTimestamp(b).getTime() - this.getLastMessageTimestamp(a).getTime());
 
-    for (const topic of sortedTopics) {
+    for (const topic of sorted) {
       const last = this.getLastMessageTimestamp(topic);
       const diff = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
 
       if (diff < 1) {
-        groups['Recently'].push(topic);
+        buckets[0].topics.push(topic);
       } else if (diff < 7) {
-        groups['Past 7 Days'].push(topic);
+        buckets[1].topics.push(topic);
       } else if (diff < 30) {
-        groups['Past Month'].push(topic);
+        buckets[2].topics.push(topic);
       } else {
-        groups['Older'].push(topic);
+        buckets[3].topics.push(topic);
       }
     }
 
-    return groups;
+    return buckets.filter(bucket => bucket.topics.length > 0);
   }
 
   get pinnedTopics(): ChatTopic[] {

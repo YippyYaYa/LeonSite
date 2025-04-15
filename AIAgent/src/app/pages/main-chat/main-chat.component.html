@@ -41,9 +41,9 @@
 
     <!-- Grouped Topics -->
     <ul class="space-y-4 text-sm">
-      @for (group of groupedTopics | keyvalue; track group.key) {
-        <li class="text-xs uppercase text-gray-500 font-semibold">{{ group.key }}</li>
-        @for (topic of group.value; track topic.id) {
+      @for (group of groupedTopicsSorted; track group.label) {
+        <li class="text-xs uppercase text-gray-500 font-semibold">{{ group.label }}</li>
+        @for (topic of group.topics; track topic.id) {
           <li
             class="p-2 rounded cursor-pointer hover:bg-gray-200 flex justify-between items-center group"
             [class.bg-gray-200]="topic.id === selectedTopicId"
@@ -56,7 +56,7 @@
     </ul>
 
     <ng-template #actionButtons let-topic="topic">
-      <div class="flex gap-1 ml-2 md:opacity-0 md:group-hover:opacity-100 md:transition-opacity">
+      <div class="gap-1 ml-2 md:flex md:opacity-0 md:group-hover:opacity-100 md:transition-opacity">
         <button (click)="pinTopic(topic, $event)" class="text-xs text-yellow-600 hover:underline">
           {{ isTopicPinned(topic) ? '❌' : '📌' }}
         </button>
