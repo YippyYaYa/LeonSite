@@ -3,34 +3,79 @@ import {
   ViewChild,
   ElementRef,
   AfterViewChecked,
-  OnInit
+  OnInit,
+  WritableSignal,
+  signal,
+  computed,
+  Signal,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ChatMessage, ChatTopic } from './main-chat.model';
+import { ChatMessage, ChatTopic, GroupedTopic } from './main-chat.model';
+import { GroupLabels } from './main-chat.constant';
 
 @Component({
   selector: 'app-main-chat',
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './main-chat.component.html',
-  styleUrl: './main-chat.component.scss'
+  styleUrl: './main-chat.component.scss',
 })
 export class MainChatComponent implements OnInit, AfterViewChecked {
   @ViewChild('chatContainer') private chatContainer!: ElementRef;
 
-  topics: ChatTopic[] = [];
-  selectedTopicId: string = '';
+  // topics: ChatTopic[] = [];
+  $topics: WritableSignal<ChatTopic[]> = signal([]);
+  groupedTopicsSignalArray: GroupedTopic[] = [
+    {
+      label: GroupLabels.recently,
+      $topics: computed(() =>
+        this.$topics().filter((topic) => {
+          return this.getTimeDiff(topic) < 1;
+        })
+      ),
+    },
+    {
+      label: GroupLabels.lastWeek,
+      $topics: computed(() =>
+        this.$topics().filter((topic) => {
+          return !(this.getTimeDiff(topic) < 1) && this.getTimeDiff(topic) < 7;
+        })
+      ),
+    },
+    {
+      label: GroupLabels.lastMonth,
+      $topics: computed(() =>
+        this.$topics().filter((topic) => {
+          return !(this.getTimeDiff(topic) < 7) && this.getTimeDiff(topic) < 30;
+        })
+      ),
+    },
+    {
+      label: GroupLabels.older,
+      $topics: computed(() =>
+        this.$topics().filter((topic) => {
+          return !(this.getTimeDiff(topic) < 30);
+        })
+      ),
+    },
+  ];
+  $chatHistory: Signal<ChatMessage[]> = computed(() => {
+    const newMessage =
+      this.$topics().find((topic) => topic.id === this.$selectedTopic()?.id)
+        ?.messages || [];
+    return newMessage;
+  });
+  $selectedTopic: WritableSignal<ChatTopic> = signal(null);
   newMessage = '';
-  isTyping = false;
+  isTyping: boolean = false;
   showSidebar = false;
 
   ngOnInit(): void {
     const saved = localStorage.getItem('chatTopics');
-    this.topics = saved ? JSON.parse(saved) : [];
-
-    if (this.topics.length > 0) {
-      this.selectedTopicId = this.topics[0].id;
+    this.$topics.set(saved ? JSON.parse(saved) : []);
+    if (this.$topics().length > 0) {
+      this.$selectedTopic.set(this.$topics()[0]);
     }
   }
 
@@ -38,81 +83,19 @@ export class MainChatComponent implements OnInit, AfterViewChecked {
     this.scrollToBottom();
   }
 
-  get chatHistory(): ChatMessage[] {
-    const topic = this.topics.find(t => t.id === this.selectedTopicId);
-    return topic ? topic.messages : [];
-  }
-
-  get groupedTopicsSorted(): { label: string, topics: ChatTopic[] }[] {
-    const now = new Date();
-    const buckets: { label: string, topics: ChatTopic[] }[] = [
-      { label: 'Recently', topics: [] },
-      { label: 'Past 7 Days', topics: [] },
-      { label: 'Past Month', topics: [] },
-      { label: 'Older', topics: [] }
-    ];
-
-    const sorted = this.topics
-      .filter(t => !t.pinned)
-      .sort((a, b) => this.getLastMessageTimestamp(b).getTime() - this.getLastMessageTimestamp(a).getTime());
-
-    for (const topic of sorted) {
-      const last = this.getLastMessageTimestamp(topic);
-      const diff = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
-
-      if (diff < 1) {
-        buckets[0].topics.push(topic);
-      } else if (diff < 7) {
-        buckets[1].topics.push(topic);
-      } else if (diff < 30) {
-        buckets[2].topics.push(topic);
-      } else {
-        buckets[3].topics.push(topic);
-      }
-    }
-
-    return buckets.filter(bucket => bucket.topics.length > 0);
-  }
-
-  get pinnedTopics(): ChatTopic[] {
-    return this.topics.filter(t => t.pinned);
-  }
-
-  isTopicPinned(topic: ChatTopic): boolean {
-    return !!topic.pinned;
-  }
-
-  pinTopic(topic: ChatTopic, e: MouseEvent): void {
-    e.stopPropagation();
-    topic.pinned = !topic.pinned;
-    this.updateLocalStorage();
-  }
-
-  renameTopic(topic: ChatTopic, e: MouseEvent): void {
-    e.stopPropagation();
-    const newTitle = prompt('Rename topic:', topic.title);
-    if (newTitle) {
-      topic.title = newTitle;
-      this.updateLocalStorage();
-    }
-  }
-
-  deleteTopic(topic: ChatTopic, e: MouseEvent): void {
-    e.stopPropagation();
-    const confirmDelete = confirm(`Delete topic "${topic.title}"?`);
-    if (confirmDelete) {
-      this.topics = this.topics.filter(t => t.id !== topic.id);
-      if (this.selectedTopicId === topic.id) this.selectedTopicId = '';
-      this.updateLocalStorage();
-    }
-  }
-
   private getLastMessageTimestamp(topic: ChatTopic): Date {
     const lastMsg = topic.messages.at(-1);
-    if ('timestamp' in (lastMsg ?? {})) {
-      return new Date((lastMsg as any).timestamp);
+    if (lastMsg?.timestamp) {
+      return new Date(lastMsg.timestamp);
     }
     return lastMsg ? new Date() : new Date(topic.createdAt);
+  }
+
+  private getTimeDiff(topic) {
+    const now = new Date();
+    const last = this.getLastMessageTimestamp(topic);
+    const diff = (now.getTime() - last.getTime()) / (1000 * 60 * 60 * 24);
+    return diff;
   }
 
   scrollToBottom(): void {
@@ -124,8 +107,8 @@ export class MainChatComponent implements OnInit, AfterViewChecked {
     }
   }
 
-  loadChat(topicId: string): void {
-    this.selectedTopicId = topicId;
+  loadChat(topic: ChatTopic): void {
+    this.$selectedTopic.set(topic);
     this.newMessage = '';
     this.isTyping = false;
     this.showSidebar = false;
@@ -133,58 +116,76 @@ export class MainChatComponent implements OnInit, AfterViewChecked {
 
   sendMessage(): void {
     const message = this.newMessage.trim();
-    if (!message) return;
+    if (!message || this.isTyping) return;
 
-    if (!this.selectedTopicId) {
-      const newTitle = message.length > 40 ? message.slice(0, 40) + '...' : message;
+    const timeNow = new Date().toISOString();
+
+    // New Topic
+    if (!this.$selectedTopic()) {
+      const newTitle =
+        message.length > 40 ? message.slice(0, 40) + '...' : message;
       const newId = crypto.randomUUID();
 
       const newTopic: ChatTopic = {
         id: newId,
         title: newTitle,
-        messages: [{ from: 'user', text: message }],
-        createdAt: new Date().toISOString(),
-        pinned: false
+        messages: [
+          {
+            from: 'user',
+            text: message,
+            messageId: 0,
+            timestamp: timeNow,
+          },
+        ],
+        createdAt: timeNow,
+        pinned: false,
       };
-
-      this.topics.push(newTopic);
-      this.selectedTopicId = newId;
-      this.newMessage = '';
-      this.isTyping = true;
-      this.updateLocalStorage();
-
-      setTimeout(() => {
-        newTopic.messages.push({
-          from: 'ai',
-          text: 'Thank you for your question. Let me get back to you with the data.'
+      this.$topics.update((topics) => [...topics, newTopic]);
+      this.$selectedTopic.set(newTopic);
+    } else {
+      this.$topics.update((topics) => {
+        const topic = topics.find((topic) => {
+          return topic.id === this.$selectedTopic().id;
         });
-        this.isTyping = false;
-        this.updateLocalStorage();
-      }, 1000);
 
-      return;
+        topic.messages.push({
+          from: 'user',
+          text: message,
+          messageId: topic.messages.length,
+          timestamp: timeNow,
+        });
+        return topics;
+      });
     }
 
-    const topic = this.topics.find(t => t.id === this.selectedTopicId);
-    if (!topic) return;
-
-    topic.messages.push({ from: 'user', text: message });
     this.newMessage = '';
     this.isTyping = true;
     this.updateLocalStorage();
 
+    this.fetchResponse();
+  }
+
+  fetchResponse() {
     setTimeout(() => {
-      topic.messages.push({
-        from: 'ai',
-        text: 'Thank you for your question. Let me get back to you with the data.'
-      });
-      this.isTyping = false;
-      this.updateLocalStorage();
+      const timeNow = new Date().toISOString();
+      if (this.isTyping) {
+        this.$selectedTopic.update((topic) => {
+          topic.messages.push({
+            from: 'ai',
+            text: 'Thank you for your question. Let me get back to you with the data.',
+            messageId: topic.messages.length,
+            timestamp: timeNow,
+          });
+          return topic;
+        });
+        this.isTyping = false;
+        this.updateLocalStorage();
+      }
     }, 1000);
   }
 
   updateLocalStorage(): void {
-    localStorage.setItem('chatTopics', JSON.stringify(this.topics));
+    localStorage.setItem('chatTopics', JSON.stringify(this.$topics()));
   }
 
   screenIsSmall(): boolean {
